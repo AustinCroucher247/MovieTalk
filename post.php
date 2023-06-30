@@ -30,24 +30,22 @@ if (!$post) {
     exit();
 }
 
-$commentsSql = "SELECT * FROM comments WHERE post_detail_id = '$postId' AND parent_id IS NULL";
-$commentsResult = $conn->query($commentsSql);
+function getComments($conn, $postId, $parentId = 0) {
+    $comments = [];
+    $sql = "SELECT * FROM comments WHERE post_detail_id = '$postId' AND parent_id = '$parentId'";
+    $result = $conn->query($sql);
 
-$comments = [];
-
-if ($commentsResult->num_rows > 0) {
-    while ($row = $commentsResult->fetch_assoc()) {
-        $row['replies'] = [];
-        $repliesSql = "SELECT * FROM comments WHERE parent_id = '{$row['id']}'";
-        $repliesResult = $conn->query($repliesSql);
-        if ($repliesResult->num_rows > 0) {
-            while ($reply = $repliesResult->fetch_assoc()) {
-                $row['replies'][] = $reply;
-            }
+    if ($result->num_rows > 0) {
+        while ($row = $result->fetch_assoc()) {
+            $row['replies'] = getComments($conn, $postId, $row['id']);
+            $comments[] = $row;
         }
-        $comments[] = $row;
     }
+
+    return $comments;
 }
+
+$comments = getComments($conn, $postId);
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (!isset($_SESSION['username'])) {
@@ -70,7 +68,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
 }
-
+$result = $conn->query($sql) or die(mysqli_error($conn));
 $conn->close();
 ?>
 
@@ -89,50 +87,70 @@ $conn->close();
             <p class="text-center p-1 m-1"><?php echo $post['content']; ?></p>
             <p>Created at: <?php echo $post['created_at']; ?></p>
 
-            <h3>Comments</h3>
-            <?php foreach ($comments as $comment): ?>
-                <div class="comment">
-                    <div class="card mb-2">
-                        <div class="card-body">
-                            <h6 class="card-subtitle mb-2 text-muted">Username: <?php echo $comment['username']; ?></h6>
-                            <p class="card-text"><?php echo $comment['comment']; ?></p>
-                            <p class="card-text">Created at: <?php echo $comment['created_at']; ?></p>
-                        </div>
-                        <form method="POST" action="post.php?post_id=<?php echo $postId; ?>" class="ml-4">
-                            <input type="hidden" name="parent_id" value="<?php echo $comment['id']; ?>">
-                            <div class="form-group">
-                                <textarea class="form-control" name="comment" rows="2" placeholder="Reply to this comment" required></textarea>
-                            </div>
-                            <button type="submit" class="btn btn-primary">Reply</button>
-                        </form>
-
-                        <?php if (!empty($comment['replies'])): ?>
-                            <?php foreach ($comment['replies'] as $reply): ?>
-                                <div class="card mt-2 ml-5">
-                                    <div class="card-body">
-                                        <h6 class="card-subtitle mb-2 text-muted">Username: <?php echo $reply['username']; ?></h6>
-                                        <p class="card-text"><?php echo $reply['comment']; ?></p>
-                                        <p class="card-text">Created at: <?php echo $reply['created_at']; ?></p>
-                                    </div>
-                                </div>
-                            <?php endforeach; ?>
-                        <?php endif; ?>
-
-                    </div>
-                </div>
-            <?php endforeach; ?>
-
             <h3>Add a Comment</h3>
-<?php if (isset($_SESSION['username'])): ?>
-    <form method="POST" action="post.php?post_id=<?php echo $postId; ?>">
-        <div class="form-group">
-            <textarea class="form-control" name="comment" rows="4" placeholder="Enter your comment" required></textarea>
-        </div>
-        <button type="submit" class="btn btn-primary">Submit Comment</button>
-    </form>
-<?php else: ?>
-    <p>You must be <a href="login.php">logged in</a> to post a comment.</p>
-<?php endif; ?>
+            <?php if (isset($_SESSION['username'])): ?>
+                <form method="POST" action="post.php?post_id=<?php echo $postId; ?>">
+                    <div class="form-group">
+                        <textarea class="form-control" name="comment" rows="4" placeholder="Enter your comment" required></textarea>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Submit Comment</button>
+                </form>
+            <?php else: ?>
+                <p>You must be <a href="login.php">logged in</a> to post a comment.</p>
+            <?php endif; ?>
+
+            <h3>Comments</h3>
+
+            <?php function displayComments($comments, $postId) { ?>
+                <?php foreach ($comments as $comment): ?>
+                    <?php
+                    $commentTimestamp = strtotime($comment['created_at']);
+                    $currentTimestamp = time();
+                    $timeAgo = '';
+
+                    $timeDifference = $currentTimestamp - $commentTimestamp;
+
+                    if ($timeDifference < 60) {
+                        $timeAgo = $timeDifference . ' seconds ago';
+                    } elseif ($timeDifference < 3600) {
+                        $minutes = floor($timeDifference / 60);
+                        $timeAgo = $minutes . ' minute' . ($minutes > 1 ? 's' : '') . ' ago';
+                    } elseif ($timeDifference < 86400) {
+                        $hours = floor($timeDifference / 3600);
+                        $timeAgo = $hours . ' hour' . ($hours > 1 ? 's' : '') . ' ago';
+                    } else {
+                        $days = floor($timeDifference / 86400);
+                        $timeAgo = $days . ' day' . ($days > 1 ? 's' : '') . ' ago';
+                    }
+                    ?>
+                    <div class="comment">
+                        <div class="card mb-2">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <h6 class="card-subtitle mb-2 text-muted">Username: <?php echo $comment['username']; ?></h6>
+                                    <p class="card-text text-right"><?php echo $timeAgo; ?></p>
+                                </div>
+                                <p class="card-text"><?php echo $comment['comment']; ?></p>
+                            </div>
+                            <form method="POST" action="post.php?post_id=<?php echo $postId; ?>" class="ml-4">
+                                <input type="hidden" name="parent_id" value="<?php echo $comment['id']; ?>">
+                                <div class="form-group">
+                                    <textarea class="form-control" name="comment" rows="2" placeholder="Reply to this comment" required></textarea>
+                                </div>
+                                <button type="submit" class="btn btn-primary">Reply</button>
+                            </form>
+                            <?php if (!empty($comment['replies'])): ?>
+                                <div class="ml-5">
+                                    <?php displayComments($comment['replies'], $postId); ?>
+                                </div>
+                            <?php endif; ?>
+                        </div>
+                    </div>
+                <?php endforeach; ?>
+            <?php } ?>
+
+            <?php displayComments($comments, $postId); ?>
+
         </div>
     </div>
 </body>
