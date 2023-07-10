@@ -83,10 +83,11 @@ $conn->close();
 <body>
     <div class="container mt-5">
         <div class=" mb-5">
-            <h2 class="text-center"><?php echo $post['title']; ?></h2>
-            <p class="text-center p-1 m-1"><?php echo $post['content']; ?></p>
-            <p>Created at: <?php echo $post['created_at']; ?></p>
-
+            <div class="border"> 
+            <h2 class="text-left"><u> <?php echo $post['title']; ?></h2></u>
+            <p class="text-left p-1 m-1"><?php echo $post['content']; ?></p>
+            <p>Posted at: <?php echo $post['created_at']; ?></p>
+            </div>
             <h3>Add a Comment</h3>
             <?php if (isset($_SESSION['username'])): ?>
                 <form method="POST" action="post.php?post_id=<?php echo $postId; ?>">

@@ -1,45 +1,59 @@
 <?php
-session_start(); // Start the session at the very beginning
+session_start();
 
-if (!isset($_SESSION['username'])) {
-    header("Location: login.php"); // Redirect to login page if not logged in
-    exit();
+$servername = "localhost";
+$username = "root";
+$password = "";
+$dbname = "movie_db";
+
+// Create connection
+$conn = new mysqli($servername, $username, $password, $dbname);
+
+// Check connection
+if ($conn->connect_error) {
+    die("Connection failed: " . $conn->connect_error);
 }
 
-// Get user data from the database. You would want to replace this with a real query to your database
-$user = [
-    'name' => 'John Doe',
-    'username' => $_SESSION['username'], // Use the session variable
-    'email' => 'johndoe@example.com',
-];
+include 'navbar.php';
 
-// The code for getting movie data
-$movies = [
-    ['title' => 'Inception', 'year' => 2010],
-    ['title' => 'The Dark Knight', 'year' => 2008],
-    ['title' => 'Interstellar', 'year' => 2014],
-];
+// Get the username from the session
+$username = $_SESSION['username'];
+
+// Prepare the SQL statement
+$sql = "SELECT * FROM posts WHERE username = ?";
+$stmt = $conn->prepare($sql);
+$stmt->bind_param("s", $username);
+$stmt->execute();
+
+// Get the result
+$result = $stmt->get_result();
+$posts = $result->fetch_all(MYSQLI_ASSOC);
+
+$conn->close();
 ?>
 
-<!-- The rest of the HTML code -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>User Profile</title>
+</head>
+<body>
+    <div class="container">
+        <h1>User Profile</h1>
+        <h2>Username: <?php echo $username; ?></h2>
 
-<div class="card mb-4">
-    <div class="card-body">
-        <h2 class="card-title"><?php echo $user['name']; ?></h2>
-        <p class="card-text">
-            Username: <?php echo $user['username']; ?><br> <!-- This should display the logged in user's username -->
-            Email: <?php echo $user['email']; ?>
-        </p>
+        <h3>Posts</h3>
+        <?php foreach ($posts as $post): ?>
+            <div>
+                <h4><?php echo $post['title']; ?></h4>
+                <p>Content: <?php echo $post['content']; ?></p>
+                <a href="post.php?post_id=<?php echo $post['id']; ?>" class="btn btn-primary">View Post</a>
+                <!-- Display other post information as needed -->
+            </div>
+            <hr>
+        <?php endforeach; ?>
     </div>
-</div>
-
-<h3>Favorite Movies</h3>
-
-<?php foreach ($movies as $movie): ?>
-    <div class="card mb-4">
-        <div class="card-body">
-            <h4 class="card-title"><?php echo $movie['title']; ?></h4>
-            <p class="card-text">Year: <?php echo $movie['year']; ?></p>
-        </div>
-    </div>
-<?php endforeach; ?>
+</body>
+</html>

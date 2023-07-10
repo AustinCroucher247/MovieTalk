@@ -1,4 +1,3 @@
-
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -20,18 +19,16 @@
             </li>
             <?php if(isset($_SESSION['username'])): ?>
                 <li class="nav-item">
-                    <a class="nav-link" href="index.php?page=profile">Profile</a>
+                <a class="nav-link" href="profile.php?id=<?php echo $_SESSION['username']; ?>">Profile</a>
                 </li>
                 <li class="nav-item">
                     <a class="nav-link" href="logout.php">Logout</a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link float-right"><?php echo htmlspecialchars($_SESSION['username']); ?></a>
+                <a class="nav-link" href="profile.php?id=<?php echo $_SESSION['username']; ?>">Profile</a>
                 </li>
             <?php else: ?>
-                <li class="nav-item">
-                    <a class="nav-link" href="popular.php">Popular</a>
-                </li>
+
                 <li class="nav-item">
                     <a class="nav-link" href="register.php">Register</a>
                 </li>
